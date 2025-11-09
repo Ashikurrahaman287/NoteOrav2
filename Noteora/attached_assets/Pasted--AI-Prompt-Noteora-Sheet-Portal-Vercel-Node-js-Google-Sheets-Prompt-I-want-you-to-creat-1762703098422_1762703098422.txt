@@ -1,0 +1,100 @@
+🚀 AI Prompt – “Noteora Sheet Portal” (Vercel Node.js + Google Sheets)
+
+Prompt:
+
+I want you to create a complete, Vercel-ready Node.js web app called “Noteora Sheet Portal” that connects to Google Sheets. The app should have both a frontend landing page and backend API endpoints to search and add records.
+
+Configuration:
+
+const SHEET_1_ID = "1riG_XlCSB5gZlWzU2wc8zebBS5KEN37n7fc3m4q6_rc";
+const SHEET_2_ID = "1SzTC61GLJgO3_RPRSn8AGYwUF6O4-4uGyvG4EerTztI";
+const WORKSHEET_NAME = "Sheet1";
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
+
+
+The project folder already has credentials.json and token11.json in the root.
+
+Frontend Requirements (Landing Page /public/index.html):
+
+Single-page UI (TailwindCSS or Bootstrap) with two sections:
+a. Search Record
+
+Input field (search by Ticker or Project Name)
+
+Button to trigger search
+
+Fetch and display matching rows from Sheet 1 only
+
+b. Add New Record
+
+Input fields:
+
+Ticker
+
+Project Name
+
+X Handle
+
+Twitter Outreach (Yes/No/Link)
+
+Lock Status
+
+Contact Person
+
+Initial Recording Date (default = today)
+
+Discussion Date (default = today)
+
+On submit, insert row at index 3 in both Sheet 1 and Sheet 2
+
+Show success/error message without page reload
+
+Backend Requirements (Node.js + Express / API):
+
+Use googleapis for Google Sheets API
+
+Use express for API endpoints
+
+Use dotenv for environment variables
+
+Endpoints:
+
+POST /api/add → Add new record to both Sheet 1 and Sheet 2
+
+GET /api/search?query=... → Search records from Sheet 1
+
+Responses must be JSON with success/error messages.
+
+Project Structure:
+
+/api/add.js
+/api/search.js
+/public/index.html
+/public/style.css
+/package.json
+/credentials.json
+/token11.json
+/vercel.json
+
+
+Use Next.js API routes or Vercel Serverless Functions (Node.js 18+ runtime)
+
+Set "type": "module" in package.json
+
+Include vercel.json for deployment config
+
+App must be deployable using vercel --prod
+
+UX Requirements:
+
+Clean UI, responsive for mobile & desktop
+
+Search results displayed in a table
+
+Add record form validates required fields
+
+Show success/fail toasts or alerts
+
+Goal: After deployment, users can visit the landing page, search projects in Sheet 1, and add new records to both Sheet 1 and Sheet 2 in real time.
+
+Do not use Python; use Node.js (Vercel-ready) only.

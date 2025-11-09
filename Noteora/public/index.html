@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noteora Sheet Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-blue-600 mb-2">Noteora Sheet Portal</h1>
+            <p class="text-gray-600">Search and manage your Google Sheets records</p>
+        </header>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Search Record</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="searchQuery" class="block text-sm font-medium text-gray-700 mb-2">
+                            Search by Ticker, Project Name, or Twitter Handle
+                        </label>
+                        <input 
+                            type="text" 
+                            id="searchQuery" 
+                            placeholder="Enter ticker, project name, or @handle..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                    <button 
+                        onclick="searchRecords()" 
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 font-medium"
+                    >
+                        Search
+                    </button>
+                </div>
+
+                <div id="searchResults" class="mt-6"></div>
+            </section>
+
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Add New Record</h2>
+                <form id="addRecordForm" class="space-y-4">
+                    <div>
+                        <label for="ticker" class="block text-sm font-medium text-gray-700 mb-1">
+                            Ticker <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="ticker" 
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="projectName" class="block text-sm font-medium text-gray-700 mb-1">
+                            Project Name <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="projectName" 
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="xHandle" class="block text-sm font-medium text-gray-700 mb-1">
+                            X Handle
+                        </label>
+                        <input 
+                            type="text" 
+                            id="xHandle" 
+                            placeholder="@username"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="twitterOutreach" class="block text-sm font-medium text-gray-700 mb-1">
+                            Twitter Outreach
+                        </label>
+                        <select 
+                            id="twitterOutreach"
+                            onchange="toggleLinkField()"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="">Select...</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Link">Link</option>
+                        </select>
+                    </div>
+
+                    <div id="linkFieldContainer" class="hidden">
+                        <label for="twitterOutreachLink" class="block text-sm font-medium text-gray-700 mb-1">
+                            Twitter Outreach Link
+                        </label>
+                        <input 
+                            type="url" 
+                            id="twitterOutreachLink"
+                            placeholder="https://twitter.com/..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="lockStatus" class="block text-sm font-medium text-gray-700 mb-1">
+                            Lock Status
+                        </label>
+                        <input 
+                            type="text" 
+                            id="lockStatus"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="contactPerson" class="block text-sm font-medium text-gray-700 mb-1">
+                            Contact Person
+                        </label>
+                        <input 
+                            type="text" 
+                            id="contactPerson"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="initialRecordingDate" class="block text-sm font-medium text-gray-700 mb-1">
+                            Initial Recording Date
+                        </label>
+                        <input 
+                            type="date" 
+                            id="initialRecordingDate"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="discussionDate" class="block text-sm font-medium text-gray-700 mb-1">
+                            Discussion Date
+                        </label>
+                        <input 
+                            type="date" 
+                            id="discussionDate"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-200 font-medium"
+                    >
+                        Add Record
+                    </button>
+                </form>
+
+                <div id="addMessage" class="mt-4"></div>
+            </section>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-4 right-4 hidden"></div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
