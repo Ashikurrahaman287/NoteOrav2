@@ -48,25 +48,7 @@ async function searchRecords() {
         const result = await response.json();
 
         if (result.success && result.data.length > 0) {
-            const headers = Object.keys(result.data[0]);
-            let tableHTML = '<div class="overflow-x-auto"><table class="results-table"><thead><tr>';
-            
-            headers.forEach(header => {
-                tableHTML += `<th>${header}</th>`;
-            });
-            tableHTML += '</tr></thead><tbody>';
-
-            result.data.forEach(row => {
-                tableHTML += '<tr>';
-                headers.forEach(header => {
-                    tableHTML += `<td>${row[header] || ''}</td>`;
-                });
-                tableHTML += '</tr>';
-            });
-
-            tableHTML += '</tbody></table></div>';
-            resultsDiv.innerHTML = tableHTML;
-            showToast(result.message);
+            displayResults(result.data, result.message);
         } else {
             resultsDiv.innerHTML = `<p class="text-gray-500 text-center py-4">No matching records found</p>`;
             showToast('No matching records found', false);
@@ -76,6 +58,65 @@ async function searchRecords() {
         resultsDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${error.message}</p>`;
         showToast('Search failed: ' + error.message, false);
     }
+}
+
+async function findInactiveProjects(days) {
+    const resultsDiv = document.getElementById('searchResults');
+    
+    resultsDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Finding projects inactive for ${days}+ days...</span></div>`;
+
+    try {
+        const response = await fetch(`/api/inactive?days=${days}`);
+        const result = await response.json();
+
+        if (result.success && result.data.length > 0) {
+            displayResults(result.data, result.message, true);
+        } else if (result.success) {
+            resultsDiv.innerHTML = `<p class="text-green-600 text-center py-4">No projects found inactive for ${days}+ days</p>`;
+            showToast(`No projects inactive for ${days}+ days`, true);
+        } else {
+            resultsDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${result.message}</p>`;
+            showToast(result.message, false);
+        }
+    } catch (error) {
+        console.error('Inactive projects error:', error);
+        resultsDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${error.message}</p>`;
+        showToast('Failed to find inactive projects: ' + error.message, false);
+    }
+}
+
+function displayResults(data, message, highlightInactive = false) {
+    const resultsDiv = document.getElementById('searchResults');
+    const headers = Object.keys(data[0]);
+    let tableHTML = '<div class="overflow-x-auto"><table class="results-table"><thead><tr>';
+    
+    headers.forEach(header => {
+        tableHTML += `<th>${header}</th>`;
+    });
+    tableHTML += '</tr></thead><tbody>';
+
+    data.forEach(row => {
+        const daysInactive = row['Days Inactive'] || 0;
+        let rowClass = '';
+        if (highlightInactive) {
+            if (daysInactive >= 100) {
+                rowClass = 'class="bg-red-100"';
+            } else if (daysInactive >= 70) {
+                rowClass = 'class="bg-orange-100"';
+            } else if (daysInactive >= 50) {
+                rowClass = 'class="bg-yellow-100"';
+            }
+        }
+        tableHTML += `<tr ${rowClass}>`;
+        headers.forEach(header => {
+            tableHTML += `<td>${row[header] || ''}</td>`;
+        });
+        tableHTML += '</tr>';
+    });
+
+    tableHTML += '</tbody></table></div>';
+    resultsDiv.innerHTML = tableHTML;
+    showToast(message);
 }
 
 document.getElementById('searchQuery').addEventListener('keypress', function(e) {

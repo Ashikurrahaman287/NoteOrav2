@@ -7,22 +7,50 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function getAuthClient() {
-  const credentials = JSON.parse(
-    fs.readFileSync(path.join(__dirname, '..', 'credentials.json'), 'utf8')
-  );
-  const token = JSON.parse(
-    fs.readFileSync(path.join(__dirname, '..', 'token.json'), 'utf8')
-  );
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    const serviceAccountKey = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+    const auth = new google.auth.GoogleAuth({
+      credentials: serviceAccountKey,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+    return auth.getClient();
+  }
 
-  const { client_id, client_secret, redirect_uris } = credentials.installed;
-  const oAuth2Client = new google.auth.OAuth2(
-    client_id,
-    client_secret,
-    redirect_uris[0]
-  );
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
+    const oAuth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      'urn:ietf:wg:oauth:2.0:oob'
+    );
+    oAuth2Client.setCredentials({
+      refresh_token: process.env.GOOGLE_REFRESH_TOKEN
+    });
+    return oAuth2Client;
+  }
 
-  oAuth2Client.setCredentials(token);
-  return oAuth2Client;
+  try {
+    const credentialsPath = path.join(__dirname, '..', 'credentials.json');
+    const tokenPath = path.join(__dirname, '..', 'token.json');
+    
+    if (fs.existsSync(credentialsPath) && fs.existsSync(tokenPath)) {
+      const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+      const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
+
+      const { client_id, client_secret, redirect_uris } = credentials.installed;
+      const oAuth2Client = new google.auth.OAuth2(
+        client_id,
+        client_secret,
+        redirect_uris[0]
+      );
+
+      oAuth2Client.setCredentials(token);
+      return oAuth2Client;
+    }
+  } catch (error) {
+    console.error('File-based auth failed:', error.message);
+  }
+
+  throw new Error('Google API credentials not configured. Please set GOOGLE_SERVICE_ACCOUNT_KEY or GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_REFRESH_TOKEN environment variables.');
 }
 
 export async function getFirstSheetName(spreadsheetId) {

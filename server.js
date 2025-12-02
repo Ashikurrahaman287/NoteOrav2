@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { addRecord } from './api/add.js';
 import { searchRecords } from './api/search.js';
+import { findInactiveProjects } from './api/inactive.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +30,16 @@ app.get('/api/search', async (req, res) => {
   try {
     const query = req.query.query || '';
     const result = await searchRecords(query);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/inactive', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 14;
+    const result = await findInactiveProjects(days);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
