@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { addRecord } from './api/add.js';
 import { searchRecords } from './api/search.js';
 import { findInactiveProjects } from './api/inactive.js';
+import { validateCode } from './api/validate-code.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +16,23 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.post('/api/validate-code', async (req, res) => {
+  try {
+    const { code } = req.body;
+    const clientIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
+    
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Access code is required' });
+    }
+    
+    const result = await validateCode(code, clientIp);
+    const status = result.success ? 200 : (result.locked ? 429 : 401);
+    res.status(status).json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 app.post('/api/add', async (req, res) => {
   try {

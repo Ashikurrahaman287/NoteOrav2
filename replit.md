@@ -4,11 +4,14 @@
 A complete Node.js web application that connects to Google Sheets for searching and adding records. Built with Express.js backend and a clean TailwindCSS frontend.
 
 ## Recent Changes (December 2, 2025)
+- **Added Secret Code Access Protection** - App requires a secret access code on every page load before granting access
+- **Server-side validation** - Secret code is validated securely on the server using APP_SECRET_CODE environment variable
+- **Rate limiting** - 5 failed attempts trigger a 60-second cooldown to prevent brute force attacks
 - **Fixed authentication for deployment** - Updated sheets-helper.js to support environment variables for Google API authentication (service account or OAuth2 credentials)
 - **Added Inactive Projects Check feature** - New 14/28/50/70/100 Days buttons to find projects without follow-up contact
 - **Smart exclusion logic** - Automatically excludes projects marked as "In discussion + X Month Extension" from inactive checks
 - **Color-coded results** - Inactive projects are highlighted based on severity (yellow 50+, orange 70+, red 100+ days)
-- **New API endpoint** - Added /api/inactive endpoint for filtering inactive projects
+- **New API endpoints** - Added /api/inactive and /api/validate-code endpoints
 
 ### Previous Changes (November 9, 2025)
 - Initial project setup from GitHub import
@@ -27,6 +30,8 @@ A complete Node.js web application that connects to Google Sheets for searching 
 - **server.js**: Main Express server running on port 5000
 - **api/add.js**: Handles adding new records to both Sheet 1 and Sheet 2
 - **api/search.js**: Searches records from Sheet 1 by ticker or project name
+- **api/inactive.js**: Finds inactive projects by day threshold
+- **api/validate-code.js**: Server-side access code validation with rate limiting
 
 ### Frontend
 - **public/index.html**: Single-page UI with TailwindCSS
@@ -72,8 +77,10 @@ For the application to work, ensure:
 4. If you see "Unable to parse range" errors, verify the worksheet name and access permissions
 
 ## API Endpoints
+- `POST /api/validate-code`: Validate access code (required before any other operations)
 - `GET /api/search?query=...`: Search records
 - `POST /api/add`: Add new record
+- `GET /api/inactive?days=...`: Find inactive projects (14, 28, 50, 70, or 100 days)
 
 ## Running Locally
 ```bash

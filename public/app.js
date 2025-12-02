@@ -1,3 +1,5 @@
+let isAuthenticated = false;
+
 function getTodayDate() {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -17,9 +19,82 @@ function toggleLinkField() {
     }
 }
 
+async function validateAccessCode(code) {
+    const accessError = document.getElementById('accessError');
+    const submitBtn = document.getElementById('accessSubmitBtn');
+    const originalText = 'Unlock Access';
+    let isLocked = false;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="flex items-center justify-center"><div class="loading"></div><span class="ml-2">Validating...</span></div>';
+    accessError.classList.add('hidden');
+    
+    try {
+        const response = await fetch('/api/validate-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            isAuthenticated = true;
+            document.getElementById('accessModal').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            document.getElementById('initialRecordingDate').value = getTodayDate();
+            document.getElementById('discussionDate').value = getTodayDate();
+        } else {
+            accessError.textContent = result.message;
+            accessError.classList.remove('hidden');
+            
+            if (result.locked) {
+                isLocked = true;
+                let remaining = result.remainingSeconds || 60;
+                submitBtn.textContent = `Locked (${remaining}s)`;
+                const countdown = setInterval(() => {
+                    remaining--;
+                    submitBtn.textContent = `Locked (${remaining}s)`;
+                    if (remaining <= 0) {
+                        clearInterval(countdown);
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                    }
+                }, 1000);
+            }
+        }
+    } catch (error) {
+        console.error('Validation error:', error);
+        accessError.textContent = 'Connection error. Please try again.';
+        accessError.classList.remove('hidden');
+    } finally {
+        if (!isLocked) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('initialRecordingDate').value = getTodayDate();
-    document.getElementById('discussionDate').value = getTodayDate();
+    document.getElementById('accessForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const code = document.getElementById('accessCode').value;
+        if (code) {
+            validateAccessCode(code);
+        }
+    });
+    
+    document.getElementById('accessCode').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const code = this.value;
+            if (code) {
+                validateAccessCode(code);
+            }
+        }
+    });
 });
 
 function showToast(message, isSuccess = true) {
