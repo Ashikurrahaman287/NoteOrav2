@@ -3,7 +3,14 @@
 ## Overview
 A complete Node.js web application that connects to Google Sheets for searching and adding records. Built with Express.js backend and a clean TailwindCSS frontend.
 
-## Recent Changes (November 9, 2025)
+## Recent Changes (December 2, 2025)
+- **Fixed authentication for deployment** - Updated sheets-helper.js to support environment variables for Google API authentication (service account or OAuth2 credentials)
+- **Added Inactive Projects Check feature** - New 14/28/50/70/100 Days buttons to find projects without follow-up contact
+- **Smart exclusion logic** - Automatically excludes projects marked as "In discussion + X Month Extension" from inactive checks
+- **Color-coded results** - Inactive projects are highlighted based on severity (yellow 50+, orange 70+, red 100+ days)
+- **New API endpoint** - Added /api/inactive endpoint for filtering inactive projects
+
+### Previous Changes (November 9, 2025)
 - Initial project setup from GitHub import
 - Created complete Node.js application with Express server
 - Implemented Google Sheets API integration using googleapis
@@ -50,9 +57,16 @@ A complete Node.js web application that connects to Google Sheets for searching 
 
 ## Important Setup Notes
 
+### Google Sheets Authentication
+The application supports multiple authentication methods (in order of priority):
+
+1. **Service Account (Recommended for Vercel)**: Set `GOOGLE_SERVICE_ACCOUNT_KEY` environment variable with the JSON contents of your service account key file
+2. **OAuth2 Credentials**: Set all three: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REFRESH_TOKEN`
+3. **Local Files (Development)**: Place `credentials.json` and `token.json` in the project root
+
 ### Google Sheets Access
 For the application to work, ensure:
-1. The Google account in token.json has edit access to both spreadsheets
+1. The service account or Google account has edit access to both spreadsheets
 2. The worksheet tabs are named exactly "Sheet1" (case-sensitive)
 3. Row 1 contains headers for the columns
 4. If you see "Unable to parse range" errors, verify the worksheet name and access permissions
