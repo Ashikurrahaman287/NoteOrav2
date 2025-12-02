@@ -138,25 +138,33 @@ async function searchRecords() {
 async function findInactiveProjects(days) {
     const resultsDiv = document.getElementById('searchResults');
     
-    resultsDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Finding projects inactive for ${days}+ days...</span></div>`;
+    resultsDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Generating CSV for ${days}+ days inactive projects...</span></div>`;
 
     try {
-        const response = await fetch(`/api/inactive?days=${days}`);
-        const result = await response.json();
-
-        if (result.success && result.data.length > 0) {
-            displayResults(result.data, result.message, true);
-        } else if (result.success) {
-            resultsDiv.innerHTML = `<p class="text-green-600 text-center py-4">No projects found inactive for ${days}+ days</p>`;
-            showToast(`No projects inactive for ${days}+ days`, true);
+        const response = await fetch(`/api/inactive?days=${days}&format=csv`);
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `inactive-projects-${days}days.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            resultsDiv.innerHTML = `<p class="text-green-600 text-center py-4">✓ CSV file downloaded successfully!</p>`;
+            showToast(`CSV generated successfully — check your downloads folder`, true);
         } else {
+            const result = await response.json();
             resultsDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${result.message}</p>`;
             showToast(result.message, false);
         }
     } catch (error) {
         console.error('Inactive projects error:', error);
         resultsDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${error.message}</p>`;
-        showToast('Failed to find inactive projects: ' + error.message, false);
+        showToast('Failed to generate CSV: ' + error.message, false);
     }
 }
 

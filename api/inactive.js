@@ -51,7 +51,23 @@ function getDaysSince(dateStr) {
   return diffDays;
 }
 
-async function findInactiveProjects(dayThreshold) {
+function convertToCSV(data, headers) {
+  const csvRows = [];
+  csvRows.push(headers.concat('Days Inactive').join(','));
+  
+  data.forEach(record => {
+    const values = headers.map(header => {
+      const value = String(record[header] || '');
+      return value.includes(',') || value.includes('"') ? `"${value.replace(/"/g, '""')}"` : value;
+    });
+    values.push(record['Days Inactive']);
+    csvRows.push(values.join(','));
+  });
+  
+  return csvRows.join('\n');
+}
+
+async function findInactiveProjects(dayThreshold, format = 'json') {
   try {
     const auth = await getAuthClient();
     const sheets = google.sheets({ version: 'v4', auth });
@@ -96,6 +112,16 @@ async function findInactiveProjects(dayThreshold) {
     
     inactiveProjects.sort((a, b) => b['Days Inactive'] - a['Days Inactive']);
 
+    if (format === 'csv') {
+      const csv = convertToCSV(inactiveProjects, headers);
+      return {
+        success: true,
+        csv: csv,
+        count: inactiveProjects.length,
+        message: `Found ${inactiveProjects.length} project(s) inactive for ${dayThreshold}+ days`
+      };
+    }
+
     return {
       success: true,
       data: inactiveProjects,
@@ -113,7 +139,15 @@ export default async function handler(req, res) {
   }
 
   const days = parseInt(req.query.days) || 14;
-  const result = await findInactiveProjects(days);
+  const format = req.query.format || 'json';
+  const result = await findInactiveProjects(days, format);
+  
+  if (format === 'csv' && result.success) {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="inactive-projects-${days}days.csv"`);
+    return res.send(result.csv);
+  }
+  
   res.status(200).json(result);
 }
 

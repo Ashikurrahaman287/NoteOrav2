@@ -34,7 +34,7 @@ The app will be available on port 5000.
 
 **On Vercel:**
 
-See the complete deployment guide in [DEPLOY_TO_VERCEL.md](./DEPLOY_TO_VERCEL.md)
+See the complete deployment guide in [VERCEL_SECRETS_SETUP.md](./VERCEL_SECRETS_SETUP.md)
 
 Quick deployment:
 ```bash
@@ -42,6 +42,8 @@ npm install -g vercel
 vercel login
 vercel --prod
 ```
+
+**Important:** Set up environment variables in Vercel dashboard before deploying. See [VERCEL_SECRETS_SETUP.md](./VERCEL_SECRETS_SETUP.md) for details.
 
 ### 3. Troubleshooting
 
