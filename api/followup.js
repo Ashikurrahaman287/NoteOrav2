@@ -73,7 +73,7 @@ async function getFollowUpRecords() {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_1_ID,
-      range: `${worksheetName}!A:H`,
+      range: `${worksheetName}!A:J`,
     });
 
     const rows = response.data.values;
@@ -87,14 +87,16 @@ async function getFollowUpRecords() {
     console.log(`\n=== Follow-Up Search ===`);
     console.log(`Total rows: ${rows.length - 1}`);
     console.log(`Headers:`, headers);
-    console.log(`Looking for Contact Person (column 5): ASH or Yvonne`);
-    console.log(`Looking for Discussion Date (column 7): exactly 12 days ago\n`);
+    console.log(`Looking for Contact Person (column 7): ASH or Yvonne`);
+    console.log(`Looking for Discussion Date (column 9): exactly 12 days ago\n`);
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       
-      const contactPerson = (row[5] || '').trim();
-      const lastContactDate = row[7] || '';
+      // Column 7 is Contact Person (index 6)
+      // Column 9 is Discussion Date (index 8)
+      const contactPerson = (row[6] || '').trim();
+      const discussionDate = row[8] || '';
       
       const isValidPerson = contactPerson.toLowerCase() === 'ash' || contactPerson.toLowerCase() === 'yvonne';
       
@@ -102,9 +104,9 @@ async function getFollowUpRecords() {
         continue;
       }
       
-      const daysSince = getDaysSince(lastContactDate);
+      const daysSince = getDaysSince(discussionDate);
       
-      console.log(`Row ${i}: Person=${contactPerson}, Date=${lastContactDate}, DaysSince=${daysSince}`);
+      console.log(`Row ${i}: Person=${contactPerson}, Date=${discussionDate}, DaysSince=${daysSince}`);
       
       if (daysSince === 12) {
         const record = {};
