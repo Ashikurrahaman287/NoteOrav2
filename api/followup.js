@@ -88,15 +88,15 @@ async function getFollowUpRecords() {
     console.log(`Total rows: ${rows.length - 1}`);
     console.log(`Headers:`, headers);
     console.log(`Looking for Contact Person (column 6): ASH or Yvonne`);
-    console.log(`Looking for Discussion Date (column 8): exactly 12 days ago\n`);
+    console.log(`Looking for Initial Recording Date (column 7): exactly 12 days ago\n`);
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       
       // Column 6 is Contact Person (index 5)
-      // Column 8 is Discussion Date (index 7)
+      // Column 7 is Initial Recording Date (index 6)
       const contactPerson = (row[5] || '').trim();
-      const discussionDate = row[7] || '';
+      const initialRecordingDate = row[6] || '';
       
       const isValidPerson = contactPerson.toLowerCase() === 'ash' || contactPerson.toLowerCase() === 'yvonne';
       
@@ -104,9 +104,9 @@ async function getFollowUpRecords() {
         continue;
       }
       
-      const daysSince = getDaysSince(discussionDate);
+      const daysSince = getDaysSince(initialRecordingDate);
       
-      console.log(`Row ${i}: Person=${contactPerson}, Date=${discussionDate}, DaysSince=${daysSince}`);
+      console.log(`Row ${i}: Person=${contactPerson}, Date=${initialRecordingDate}, DaysSince=${daysSince}`);
       
       if (daysSince === 12) {
         const record = {};
