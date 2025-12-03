@@ -7,28 +7,31 @@ const SHEET_1_ID = "1riG_XlCSB5gZlWzU2wc8zebBS5KEN37n7fc3m4q6_rc";
 function parseDate(dateStr) {
   if (!dateStr) return null;
   
-  const formats = [
-    /^(\d{4})-(\d{2})-(\d{2})$/,
-    /^(\d{2})\/(\d{2})\/(\d{4})$/,
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
-  ];
-  
-  for (const format of formats) {
-    const match = dateStr.match(format);
-    if (match) {
-      if (format === formats[0]) {
-        return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
-      } else {
-        return new Date(parseInt(match[3]), parseInt(match[1]) - 1, parseInt(match[2]));
-      }
-    }
+  // Try YYYY-MM-DD format
+  const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) {
+    return new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3]));
   }
   
+  // Try MM/DD/YYYY format
+  const us = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (us) {
+    return new Date(parseInt(us[3]), parseInt(us[1]) - 1, parseInt(us[2]));
+  }
+  
+  // Try DD/MM/YYYY format
+  const eu = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (eu) {
+    return new Date(parseInt(eu[3]), parseInt(eu[2]) - 1, parseInt(eu[1]));
+  }
+  
+  // Try native Date parsing
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) {
     return parsed;
   }
   
+  console.log(`  ⚠ Could not parse date: "${dateStr}"`);
   return null;
 }
 
@@ -81,6 +84,12 @@ async function getFollowUpRecords() {
     const headers = rows[0];
     const followUpRecords = [];
     
+    console.log(`\n=== Follow-Up Search ===`);
+    console.log(`Total rows: ${rows.length - 1}`);
+    console.log(`Headers:`, headers);
+    console.log(`Looking for Contact Person (column 5): ASH or Yvonne`);
+    console.log(`Looking for Discussion Date (column 7): exactly 12 days ago\n`);
+    
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       
@@ -95,14 +104,19 @@ async function getFollowUpRecords() {
       
       const daysSince = getDaysSince(lastContactDate);
       
+      console.log(`Row ${i}: Person=${contactPerson}, Date=${lastContactDate}, DaysSince=${daysSince}`);
+      
       if (daysSince === 12) {
         const record = {};
         headers.forEach((header, index) => {
           record[header] = row[index] || '';
         });
         followUpRecords.push(record);
+        console.log(`  ✓ MATCHED - Adding to results`);
       }
     }
+    
+    console.log(`\nTotal matches found: ${followUpRecords.length}`);
 
     const csv = convertToCSV(followUpRecords, headers);
     
