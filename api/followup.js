@@ -87,16 +87,16 @@ async function getFollowUpRecords() {
     console.log(`\n=== Follow-Up Search ===`);
     console.log(`Total rows: ${rows.length - 1}`);
     console.log(`Headers:`, headers);
-    console.log(`Looking for Contact Person (column 7): ASH or Yvonne`);
-    console.log(`Looking for Discussion Date (column 9): exactly 12 days ago\n`);
+    console.log(`Looking for Contact Person (column 6): ASH or Yvonne`);
+    console.log(`Looking for Discussion Date (column 8): exactly 12 days ago\n`);
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       
-      // Column 7 is Contact Person (index 6)
-      // Column 9 is Discussion Date (index 8)
-      const contactPerson = (row[6] || '').trim();
-      const discussionDate = row[8] || '';
+      // Column 6 is Contact Person (index 5)
+      // Column 8 is Discussion Date (index 7)
+      const contactPerson = (row[5] || '').trim();
+      const discussionDate = row[7] || '';
       
       const isValidPerson = contactPerson.toLowerCase() === 'ash' || contactPerson.toLowerCase() === 'yvonne';
       
