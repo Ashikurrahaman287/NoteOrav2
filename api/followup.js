@@ -109,6 +109,7 @@ async function getFollowUpRecords() {
     return {
       success: true,
       csv: csv,
+      data: followUpRecords,
       count: followUpRecords.length,
       message: `Found ${followUpRecords.length} record(s) from ASH/Yvonne contacted exactly 12 days ago`
     };

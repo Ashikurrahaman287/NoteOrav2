@@ -68,11 +68,17 @@ app.get('/api/inactive', async (req, res) => {
 
 app.get('/api/followup', async (req, res) => {
   try {
+    const format = req.query.format || 'csv';
     const result = await getFollowUpRecords();
-    if (result.success && result.csv) {
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=followup-12days.csv');
-      res.send(result.csv);
+    
+    if (result.success) {
+      if (format === 'csv' && result.csv) {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=followup-12days.csv');
+        res.send(result.csv);
+      } else {
+        res.json(result);
+      }
     } else {
       res.status(500).json({ success: false, message: result.message });
     }

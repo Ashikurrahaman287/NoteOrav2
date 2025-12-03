@@ -174,10 +174,11 @@ async function downloadFollowUp() {
     resultsDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Generating follow-up CSV (12 days, ASH/Yvonne)...</span></div>`;
 
     try {
-        const response = await fetch('/api/followup');
+        // First, download the CSV
+        const csvResponse = await fetch('/api/followup?format=csv');
         
-        if (response.ok) {
-            const blob = await response.blob();
+        if (csvResponse.ok) {
+            const blob = await csvResponse.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -187,10 +188,19 @@ async function downloadFollowUp() {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
             
-            resultsDiv.innerHTML = `<p class="text-green-600 text-center py-4">✓ Follow-up CSV downloaded successfully!</p>`;
             showToast('Follow-up CSV generated — check your downloads folder', true);
+            
+            // Then, fetch and display the data
+            const dataResponse = await fetch('/api/followup?format=json');
+            const result = await dataResponse.json();
+            
+            if (result.success && result.data && result.data.length > 0) {
+                displayResults(result.data, result.message);
+            } else {
+                resultsDiv.innerHTML = `<p class="text-green-600 text-center py-4">✓ CSV downloaded! No records found matching the criteria (12 days, ASH/Yvonne)</p>`;
+            }
         } else {
-            const result = await response.json();
+            const result = await csvResponse.json();
             resultsDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${result.message}</p>`;
             showToast(result.message || 'Failed to generate follow-up CSV', false);
         }
