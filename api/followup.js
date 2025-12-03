@@ -7,25 +7,21 @@ const SHEET_1_ID = "1riG_XlCSB5gZlWzU2wc8zebBS5KEN37n7fc3m4q6_rc";
 function parseDate(dateStr) {
   if (!dateStr) return null;
   
-  // Try YYYY-MM-DD format
   const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) {
     return new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3]));
   }
   
-  // Try MM/DD/YYYY format
   const us = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (us) {
     return new Date(parseInt(us[3]), parseInt(us[1]) - 1, parseInt(us[2]));
   }
   
-  // Try DD/MM/YYYY format
   const eu = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
   if (eu) {
     return new Date(parseInt(eu[3]), parseInt(eu[2]) - 1, parseInt(eu[1]));
   }
   
-  // Try native Date parsing
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) {
     return parsed;
@@ -93,8 +89,6 @@ async function getFollowUpRecords() {
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       
-      // Column 6 is Contact Person (index 5)
-      // Column 7 is Initial Recording Date (index 6)
       const contactPerson = (row[5] || '').trim();
       const initialRecordingDate = row[6] || '';
       
@@ -135,4 +129,23 @@ async function getFollowUpRecords() {
   }
 }
 
-export { getFollowUpRecords };
+export default async function handler(req, res) {
+  try {
+    const format = req.query.format || 'csv';
+    const result = await getFollowUpRecords();
+    
+    if (result.success) {
+      if (format === 'csv' && result.csv) {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=followup-12days.csv');
+        res.status(200).send(result.csv);
+      } else {
+        res.status(200).json(result);
+      }
+    } else {
+      res.status(500).json({ success: false, message: result.message });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
