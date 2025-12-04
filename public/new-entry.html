@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Entries - Noteora Sheet Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-purple-600 mb-2">New Entries</h1>
+            <p class="text-gray-600">Recently added entries (last 60 minutes)</p>
+            <div class="mt-4">
+                <a href="/" class="text-blue-600 hover:underline mr-4">← Back to Main</a>
+                <a href="/today-entries.html" class="text-blue-600 hover:underline">View Today's Entries →</a>
+            </div>
+        </header>
+
+        <div class="mb-6 bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-gray-800">Recent Activity</h2>
+                <div class="flex gap-2">
+                    <select 
+                        id="minutesFilter" 
+                        onchange="loadNewEntries()"
+                        class="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500"
+                    >
+                        <option value="15">Last 15 min</option>
+                        <option value="30">Last 30 min</option>
+                        <option value="60" selected>Last 60 min</option>
+                        <option value="120">Last 2 hours</option>
+                        <option value="360">Last 6 hours</option>
+                    </select>
+                    <button 
+                        onclick="loadNewEntries()" 
+                        class="bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition duration-200 font-medium"
+                    >
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div id="newEntriesCount" class="text-center py-4"></div>
+        </div>
+
+        <div id="newEntriesList" class="space-y-4"></div>
+
+        <div id="loadingSpinner" class="flex items-center justify-center py-8 hidden">
+            <div class="loading"></div>
+            <span class="ml-2 text-gray-600">Loading new entries...</span>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null;
+        let autoRefreshInterval = null;
+
+        async function loadNewEntries() {
+            const spinner = document.getElementById('loadingSpinner');
+            const countDiv = document.getElementById('newEntriesCount');
+            const listDiv = document.getElementById('newEntriesList');
+            const minutes = document.getElementById('minutesFilter').value;
+            
+            spinner.classList.remove('hidden');
+            listDiv.innerHTML = '';
+
+            try {
+                const response = await fetch(`/api/new-entry?minutes=${minutes}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    currentData = result;
+                    displayNewEntriesCount(result.count, minutes);
+                    displayNewEntries(result.data);
+                } else {
+                    listDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${result.message}</p>`;
+                }
+            } catch (error) {
+                console.error('Error loading new entries:', error);
+                listDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${error.message}</p>`;
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function displayNewEntriesCount(count, minutes) {
+            const countDiv = document.getElementById('newEntriesCount');
+            countDiv.innerHTML = `
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 inline-block">
+                    <div class="text-4xl font-bold text-purple-600">${count}</div>
+                    <div class="text-sm text-gray-600 mt-1">New entries in the last ${minutes} minutes</div>
+                </div>
+            `;
+        }
+
+        function getTimeAgoText(minutesAgo) {
+            if (minutesAgo < 1) return 'Just now';
+            if (minutesAgo === 1) return '1 minute ago';
+            if (minutesAgo < 60) return `${minutesAgo} minutes ago`;
+            const hours = Math.floor(minutesAgo / 60);
+            if (hours === 1) return '1 hour ago';
+            return `${hours} hours ago`;
+        }
+
+        function displayNewEntries(entries) {
+            const listDiv = document.getElementById('newEntriesList');
+            
+            if (entries.length === 0) {
+                listDiv.innerHTML = '<p class="text-gray-500 text-center py-8">No new entries in the selected time range.</p>';
+                return;
+            }
+
+            entries.forEach((entry, index) => {
+                const timeAgo = getTimeAgoText(entry._minutesAgo);
+                const isRecent = entry._minutesAgo <= 10;
+                const borderColor = isRecent ? 'border-green-400' : 'border-gray-300';
+                const bgColor = isRecent ? 'bg-green-50' : 'bg-white';
+                
+                let html = `
+                    <div class="${bgColor} border ${borderColor} rounded-lg shadow-md p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">
+                                    ${entry['TICKER'] || 'N/A'} - ${entry['Project name'] || 'N/A'}
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Added by: <span class="font-medium">${entry['Contact \\nPerson'] || 'Unknown'}</span>
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs ${isRecent ? 'bg-green-500' : 'bg-purple-500'} text-white px-2 py-1 rounded-full">
+                                    ${timeAgo}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                            <div>
+                                <span class="text-gray-500">X Handle:</span>
+                                <span class="ml-2 font-medium">${entry['X Handle'] || 'N/A'}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Twitter Outreach:</span>
+                                <span class="ml-2 font-medium">${entry['Twitter Outreach'] || 'N/A'}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Lock Status:</span>
+                                <span class="ml-2 font-medium">${entry['Lock Status'] || 'N/A'}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Recording Date:</span>
+                                <span class="ml-2 font-medium">${entry['Initial \\nRecording Date'] || 'N/A'}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Discussion Date:</span>
+                                <span class="ml-2 font-medium">${entry['Discussion Date'] || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                listDiv.innerHTML += html;
+            });
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNewEntries();
+            
+            // Auto-refresh every 30 seconds
+            autoRefreshInterval = setInterval(loadNewEntries, 30000);
+        });
+
+        // Clear interval when page is unloaded
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

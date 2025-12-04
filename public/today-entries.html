@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Entries - Noteora Sheet Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-blue-600 mb-2">Today's Entries</h1>
+            <p class="text-gray-600">All entries made today, grouped by contact person</p>
+            <div class="mt-4">
+                <a href="/" class="text-blue-600 hover:underline mr-4">← Back to Main</a>
+                <a href="/new-entry.html" class="text-purple-600 hover:underline">View New Entries →</a>
+            </div>
+        </header>
+
+        <div class="mb-6 bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-gray-800">Summary</h2>
+                <button 
+                    onclick="loadTodayEntries()" 
+                    class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 font-medium"
+                >
+                    Refresh
+                </button>
+            </div>
+            <div id="summary" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+        </div>
+
+        <div id="entriesByPerson" class="space-y-6"></div>
+
+        <div id="loadingSpinner" class="flex items-center justify-center py-8 hidden">
+            <div class="loading"></div>
+            <span class="ml-2 text-gray-600">Loading today's entries...</span>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null;
+
+        async function loadTodayEntries() {
+            const spinner = document.getElementById('loadingSpinner');
+            const summaryDiv = document.getElementById('summary');
+            const entriesDiv = document.getElementById('entriesByPerson');
+            
+            spinner.classList.remove('hidden');
+            summaryDiv.innerHTML = '';
+            entriesDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/today-entries');
+                const result = await response.json();
+
+                if (result.success) {
+                    currentData = result;
+                    displaySummary(result.personCounts, result.totalCount);
+                    displayEntriesByPerson(result.entriesByPerson);
+                } else {
+                    entriesDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${result.message}</p>`;
+                }
+            } catch (error) {
+                console.error('Error loading today\'s entries:', error);
+                entriesDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${error.message}</p>`;
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function displaySummary(personCounts, totalCount) {
+            const summaryDiv = document.getElementById('summary');
+            
+            // Add total count
+            summaryDiv.innerHTML = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-600">${totalCount}</div>
+                    <div class="text-sm text-gray-600 mt-1">Total Entries</div>
+                </div>
+            `;
+
+            // Add counts per person
+            const sortedPersons = Object.entries(personCounts).sort((a, b) => b[1] - a[1]);
+            
+            sortedPersons.forEach(([person, count]) => {
+                const colorClass = count >= 20 ? 'bg-green-50 border-green-200 text-green-600' :
+                                  count >= 10 ? 'bg-yellow-50 border-yellow-200 text-yellow-600' :
+                                  'bg-gray-50 border-gray-200 text-gray-600';
+                
+                summaryDiv.innerHTML += `
+                    <div class="${colorClass} border rounded-lg p-4 text-center">
+                        <div class="text-3xl font-bold">${count}</div>
+                        <div class="text-sm mt-1">${person}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function displayEntriesByPerson(entriesByPerson) {
+            const entriesDiv = document.getElementById('entriesByPerson');
+            
+            if (Object.keys(entriesByPerson).length === 0) {
+                entriesDiv.innerHTML = '<p class="text-gray-500 text-center py-8">No entries made today yet.</p>';
+                return;
+            }
+
+            const sortedPersons = Object.entries(entriesByPerson).sort((a, b) => b[1].length - a[1].length);
+
+            sortedPersons.forEach(([person, entries]) => {
+                const headers = Object.keys(entries[0]);
+                
+                let html = `
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                            ${person} <span class="text-blue-600">(${entries.length} entries)</span>
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="results-table">
+                                <thead>
+                                    <tr>
+                `;
+                
+                headers.forEach(header => {
+                    html += `<th>${header}</th>`;
+                });
+                
+                html += `</tr></thead><tbody>`;
+                
+                entries.forEach(entry => {
+                    html += '<tr>';
+                    headers.forEach(header => {
+                        html += `<td>${entry[header] || ''}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                
+                html += `</tbody></table></div></div>`;
+                
+                entriesDiv.innerHTML += html;
+            });
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTodayEntries();
+            
+            // Auto-refresh every 2 minutes
+            setInterval(loadTodayEntries, 120000);
+        });
+    </script>
+</body>
+</html>

@@ -8,6 +8,8 @@ import { searchRecords } from './api/search.js';
 import { findInactiveProjects } from './api/inactive.js';
 import { validateCode } from './api/validate-code.js';
 import { getFollowUpRecords } from './api/followup.js';
+import { getTodayEntries } from './api/today-entries.js';
+import { getNewEntries } from './api/new-entry.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -80,6 +82,35 @@ app.get('/api/followup', async (req, res) => {
       } else {
         res.json(result);
       }
+    } else {
+      res.status(500).json({ success: false, message: result.message });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/today-entries', async (req, res) => {
+  try {
+    const result = await getTodayEntries();
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json({ success: false, message: result.message });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/new-entry', async (req, res) => {
+  try {
+    const minutes = parseInt(req.query.minutes) || 60;
+    const result = await getNewEntries(minutes);
+    
+    if (result.success) {
+      res.json(result);
     } else {
       res.status(500).json({ success: false, message: result.message });
     }
