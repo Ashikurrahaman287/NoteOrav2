@@ -3,7 +3,15 @@
 ## Overview
 A complete Node.js web application that connects to Google Sheets for searching and adding records. Built with Express.js backend and a clean TailwindCSS frontend.
 
-## Recent Changes (December 2, 2025)
+## Recent Changes (December 4, 2025)
+- **Cookie-Based Session Authentication** - Sessions now persist for 200 minutes using secure HttpOnly cookies
+- **Server-Side Session Management** - High-entropy tokens stored in memory with automatic cleanup
+- **CSRF Protection** - Same-origin validation via Origin/Referer header checks
+- **Protected API Routes** - All sensitive endpoints require authentication middleware
+- **New Entries Display** - Shows today's most recent entries based on position in sheet (top entries first)
+- **Today Entries Feature** - Dedicated page for viewing entries added today with count display
+
+### Previous Changes (December 2, 2025)
 - **Added Secret Code Access Protection** - App requires a secret access code on every page load before granting access
 - **Server-side validation** - Secret code is validated securely on the server using APP_SECRET_CODE environment variable
 - **Rate limiting** - 5 failed attempts trigger a 60-second cooldown to prevent brute force attacks
