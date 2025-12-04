@@ -13,23 +13,19 @@ function parseDate(dateStr) {
     return new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3]));
   }
   
-  // DD/MM/YYYY format (European/British - most common in your sheet)
-  const ddmmyyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (ddmmyyyy) {
-    const day = parseInt(ddmmyyyy[1]);
-    const month = parseInt(ddmmyyyy[2]);
-    const year = parseInt(ddmmyyyy[3]);
-    // If day > 12, it's definitely DD/MM/YYYY
-    // Otherwise check if month > 12 to determine format
-    if (day > 12 || month <= 12) {
-      return new Date(year, month - 1, day);
-    }
+  // MM/DD/YYYY format (American - used in your sheet based on 11/21/2025)
+  const mmddyyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mmddyyyy) {
+    const month = parseInt(mmddyyyy[1]);
+    const day = parseInt(mmddyyyy[2]);
+    const year = parseInt(mmddyyyy[3]);
+    return new Date(year, month - 1, day);
   }
   
-  // DD-MM-YYYY format
-  const ddmmyyyyDash = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-  if (ddmmyyyyDash) {
-    return new Date(parseInt(ddmmyyyyDash[3]), parseInt(ddmmyyyyDash[2]) - 1, parseInt(ddmmyyyyDash[1]));
+  // MM-DD-YYYY format
+  const mmddyyyyDash = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (mmddyyyyDash) {
+    return new Date(parseInt(mmddyyyyDash[3]), parseInt(mmddyyyyDash[1]) - 1, parseInt(mmddyyyyDash[2]));
   }
   
   // Try native parsing as fallback
