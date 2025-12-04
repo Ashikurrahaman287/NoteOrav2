@@ -41,7 +41,18 @@ function getMinutesAgo(dateStr) {
   return diffMinutes;
 }
 
-async function getNewEntries(minutesThreshold = 60) {
+function isToday(dateStr) {
+  const date = parseDate(dateStr);
+  if (!date) return false;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  
+  return date.getTime() === today.getTime();
+}
+
+async function getNewEntries(limit = 50) {
   try {
     const auth = await getAuthClient();
     const sheets = google.sheets({ version: 'v4', auth });
@@ -61,37 +72,30 @@ async function getNewEntries(minutesThreshold = 60) {
     const headers = rows[0];
     const newEntries = [];
     
-    // Get the latest entries (top 50 rows after header)
-    const recentRows = rows.slice(1, Math.min(51, rows.length));
+    const recentRows = rows.slice(1, Math.min(limit + 1, rows.length));
     
     for (let i = 0; i < recentRows.length; i++) {
       const row = recentRows[i];
       
       const initialRecordingDate = row[6] || '';
-      const contactPerson = (row[5] || '').trim();
       
-      const minutesAgo = getMinutesAgo(initialRecordingDate);
-      
-      // Only include entries from the last X minutes
-      if (minutesAgo !== null && minutesAgo <= minutesThreshold) {
+      if (isToday(initialRecordingDate)) {
         const record = {};
         headers.forEach((header, index) => {
           record[header] = row[index] || '';
         });
-        record['_minutesAgo'] = minutesAgo;
-        record['_rowIndex'] = i + 2; // +2 because of header and 0-indexing
+        record['_position'] = i;
+        record['_rowIndex'] = i + 2;
         newEntries.push(record);
       }
     }
-    
-    // Sort by most recent first
-    newEntries.sort((a, b) => a._minutesAgo - b._minutesAgo);
 
     return {
       success: true,
       data: newEntries,
       count: newEntries.length,
-      message: `Found ${newEntries.length} new entries in the last ${minutesThreshold} minutes`
+      limit: limit,
+      message: `Found ${newEntries.length} entries from today (checking top ${limit} rows)`
     };
   } catch (error) {
     console.error('Error finding new entries:', error);
@@ -103,8 +107,8 @@ export { getNewEntries };
 
 export default async function handler(req, res) {
   try {
-    const minutes = parseInt(req.query.minutes) || 60;
-    const result = await getNewEntries(minutes);
+    const limit = parseInt(req.query.limit) || 50;
+    const result = await getNewEntries(limit);
     
     if (result.success) {
       res.status(200).json(result);

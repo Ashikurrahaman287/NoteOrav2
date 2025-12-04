@@ -1,5 +1,63 @@
 let isAuthenticated = false;
 
+async function authFetch(url, options = {}) {
+    const response = await fetch(url, {
+        ...options,
+        credentials: 'include'
+    });
+    
+    if (response.status === 401) {
+        isAuthenticated = false;
+        document.getElementById('mainContent').classList.add('hidden');
+        document.getElementById('accessModal').classList.remove('hidden');
+        try {
+            const errorData = await response.clone().json();
+            showToast(errorData.message || 'Session expired. Please log in again.', false);
+        } catch (e) {
+            showToast('Session expired. Please log in again.', false);
+        }
+        throw new Error('Authentication required');
+    }
+    
+    if (response.status === 403) {
+        try {
+            const errorData = await response.clone().json();
+            showToast(errorData.message || 'Access denied.', false);
+        } catch (e) {
+            showToast('Access denied.', false);
+        }
+        throw new Error('Access denied');
+    }
+    
+    return response;
+}
+
+async function checkServerSession() {
+    try {
+        const response = await fetch('/api/check-session', {
+            credentials: 'include'
+        });
+        const result = await response.json();
+        return result.authenticated === true;
+    } catch (error) {
+        console.error('Session check error:', error);
+        return false;
+    }
+}
+
+async function checkAndAutoLogin() {
+    const authenticated = await checkServerSession();
+    if (authenticated) {
+        isAuthenticated = true;
+        document.getElementById('accessModal').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        document.getElementById('initialRecordingDate').value = getTodayDate();
+        document.getElementById('discussionDate').value = getTodayDate();
+        return true;
+    }
+    return false;
+}
+
 function getTodayDate() {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -35,6 +93,7 @@ async function validateAccessCode(code) {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({ code })
         });
         
@@ -77,7 +136,9 @@ async function validateAccessCode(code) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    await checkAndAutoLogin();
+    
     document.getElementById('accessForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const code = document.getElementById('accessCode').value;
@@ -119,7 +180,7 @@ async function searchRecords() {
     resultsDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Searching...</span></div>';
 
     try {
-        const response = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+        const response = await authFetch(`/api/search?query=${encodeURIComponent(query)}`);
         const result = await response.json();
 
         if (result.success && result.data.length > 0) {
@@ -141,7 +202,7 @@ async function findInactiveProjects(days) {
     resultsDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Generating CSV for ${days}+ days inactive projects...</span></div>`;
 
     try {
-        const response = await fetch(`/api/inactive?days=${days}&format=csv`);
+        const response = await authFetch(`/api/inactive?days=${days}&format=csv`);
         
         if (response.ok) {
             const blob = await response.blob();
@@ -174,8 +235,7 @@ async function downloadFollowUp(days = 12) {
     resultsDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Generating follow-up CSV (${days} days, ASH/Yvonne)...</span></div>`;
 
     try {
-        // First, download the CSV
-        const csvResponse = await fetch(`/api/followup?format=csv&days=${days}`);
+        const csvResponse = await authFetch(`/api/followup?format=csv&days=${days}`);
         
         if (csvResponse.ok) {
             const blob = await csvResponse.blob();
@@ -190,8 +250,7 @@ async function downloadFollowUp(days = 12) {
             
             showToast(`Follow-up CSV generated (${days} days) — check your downloads folder`, true);
             
-            // Then, fetch and display the data
-            const dataResponse = await fetch(`/api/followup?format=json&days=${days}`);
+            const dataResponse = await authFetch(`/api/followup?format=json&days=${days}`);
             const result = await dataResponse.json();
             
             if (result.success && result.data && result.data.length > 0) {
@@ -284,7 +343,7 @@ document.getElementById('addRecordForm').addEventListener('submit', async functi
     submitButton.innerHTML = '<div class="flex items-center justify-center"><div class="loading"></div><span class="ml-2">Adding...</span></div>';
 
     try {
-        const response = await fetch('/api/add', {
+        const response = await authFetch('/api/add', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

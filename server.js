@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser';
+import crypto from 'crypto';
 import { addRecord } from './api/add.js';
 import { searchRecords } from './api/search.js';
 import { findInactiveProjects } from './api/inactive.js';
@@ -17,8 +18,86 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+const SESSION_DURATION_MS = 200 * 60 * 1000;
+const sessions = new Map();
+
+function generateSessionToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function createSession() {
+  const token = generateSessionToken();
+  const expiresAt = Date.now() + SESSION_DURATION_MS;
+  sessions.set(token, { expiresAt });
+  return token;
+}
+
+function validateSession(token) {
+  if (!token) return false;
+  const session = sessions.get(token);
+  if (!session) return false;
+  if (Date.now() > session.expiresAt) {
+    sessions.delete(token);
+    return false;
+  }
+  return true;
+}
+
+function cleanupExpiredSessions() {
+  const now = Date.now();
+  for (const [token, session] of sessions.entries()) {
+    if (now > session.expiresAt) {
+      sessions.delete(token);
+    }
+  }
+}
+
+setInterval(cleanupExpiredSessions, 60000);
+
+function checkSameOrigin(req) {
+  const origin = req.get('Origin');
+  const referer = req.get('Referer');
+  const host = req.get('Host');
+  
+  if (!origin && !referer) {
+    return true;
+  }
+  
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      if (originUrl.host === host) return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      if (refererUrl.host === host) return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  return false;
+}
+
+function requireAuth(req, res, next) {
+  if (!checkSameOrigin(req)) {
+    return res.status(403).json({ success: false, message: 'Cross-origin request not allowed' });
+  }
+  
+  const sessionToken = req.cookies.noteora_session;
+  if (!validateSession(sessionToken)) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+  next();
+}
+
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/api/validate-code', async (req, res) => {
@@ -31,6 +110,17 @@ app.post('/api/validate-code', async (req, res) => {
     }
     
     const result = await validateCode(code, clientIp);
+    
+    if (result.success) {
+      const sessionToken = createSession();
+      res.cookie('noteora_session', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: SESSION_DURATION_MS
+      });
+    }
+    
     const status = result.success ? 200 : (result.locked ? 429 : 401);
     res.status(status).json(result);
   } catch (error) {
@@ -38,7 +128,13 @@ app.post('/api/validate-code', async (req, res) => {
   }
 });
 
-app.post('/api/add', async (req, res) => {
+app.get('/api/check-session', (req, res) => {
+  const sessionToken = req.cookies.noteora_session;
+  const isValid = validateSession(sessionToken);
+  res.json({ authenticated: isValid });
+});
+
+app.post('/api/add', requireAuth, async (req, res) => {
   try {
     const result = await addRecord(req.body);
     const status = result.success ? 200 : 500;
@@ -48,7 +144,7 @@ app.post('/api/add', async (req, res) => {
   }
 });
 
-app.get('/api/search', async (req, res) => {
+app.get('/api/search', requireAuth, async (req, res) => {
   try {
     const query = req.query.query || '';
     const result = await searchRecords(query);
@@ -58,7 +154,7 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-app.get('/api/inactive', async (req, res) => {
+app.get('/api/inactive', requireAuth, async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 14;
     const result = await findInactiveProjects(days);
@@ -68,7 +164,7 @@ app.get('/api/inactive', async (req, res) => {
   }
 });
 
-app.get('/api/followup', async (req, res) => {
+app.get('/api/followup', requireAuth, async (req, res) => {
   try {
     const format = req.query.format || 'csv';
     const days = parseInt(req.query.days) || 12;
@@ -90,7 +186,7 @@ app.get('/api/followup', async (req, res) => {
   }
 });
 
-app.get('/api/today-entries', async (req, res) => {
+app.get('/api/today-entries', requireAuth, async (req, res) => {
   try {
     const result = await getTodayEntries();
     
@@ -104,10 +200,10 @@ app.get('/api/today-entries', async (req, res) => {
   }
 });
 
-app.get('/api/new-entry', async (req, res) => {
+app.get('/api/new-entry', requireAuth, async (req, res) => {
   try {
-    const minutes = parseInt(req.query.minutes) || 60;
-    const result = await getNewEntries(minutes);
+    const limit = parseInt(req.query.limit) || 50;
+    const result = await getNewEntries(limit);
     
     if (result.success) {
       res.json(result);

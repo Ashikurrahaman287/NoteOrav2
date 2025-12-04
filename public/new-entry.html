@@ -9,10 +9,23 @@
     <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bg-gray-50">
+    <script>
+        (async function() {
+            try {
+                const response = await fetch('/api/check-session', { credentials: 'include' });
+                const result = await response.json();
+                if (!result.authenticated) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                window.location.href = '/';
+            }
+        })();
+    </script>
     <div class="container mx-auto px-4 py-8 max-w-6xl">
         <header class="text-center mb-10">
             <h1 class="text-4xl font-bold text-purple-600 mb-2">New Entries</h1>
-            <p class="text-gray-600">Recently added entries (last 60 minutes)</p>
+            <p class="text-gray-600">Recently added entries from today (newest first)</p>
             <div class="mt-4">
                 <a href="/" class="text-blue-600 hover:underline mr-4">← Back to Main</a>
                 <a href="/today-entries.html" class="text-blue-600 hover:underline">View Today's Entries →</a>
@@ -24,15 +37,14 @@
                 <h2 class="text-2xl font-semibold text-gray-800">Recent Activity</h2>
                 <div class="flex gap-2">
                     <select 
-                        id="minutesFilter" 
+                        id="limitFilter" 
                         onchange="loadNewEntries()"
                         class="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500"
                     >
-                        <option value="15">Last 15 min</option>
-                        <option value="30">Last 30 min</option>
-                        <option value="60" selected>Last 60 min</option>
-                        <option value="120">Last 2 hours</option>
-                        <option value="360">Last 6 hours</option>
+                        <option value="20">Top 20</option>
+                        <option value="50" selected>Top 50</option>
+                        <option value="100">Top 100</option>
+                        <option value="200">Top 200</option>
                     </select>
                     <button 
                         onclick="loadNewEntries()" 
@@ -62,18 +74,24 @@
             const spinner = document.getElementById('loadingSpinner');
             const countDiv = document.getElementById('newEntriesCount');
             const listDiv = document.getElementById('newEntriesList');
-            const minutes = document.getElementById('minutesFilter').value;
+            const limit = document.getElementById('limitFilter').value;
             
             spinner.classList.remove('hidden');
             listDiv.innerHTML = '';
 
             try {
-                const response = await fetch(`/api/new-entry?minutes=${minutes}`);
+                const response = await fetch(`/api/new-entry?limit=${limit}`, { credentials: 'include' });
+                
+                if (response.status === 401) {
+                    window.location.href = '/';
+                    return;
+                }
+                
                 const result = await response.json();
 
                 if (result.success) {
                     currentData = result;
-                    displayNewEntriesCount(result.count, minutes);
+                    displayNewEntriesCount(result.count, result.limit);
                     displayNewEntries(result.data);
                 } else {
                     listDiv.innerHTML = `<p class="text-red-500 text-center py-4">Error: ${result.message}</p>`;
@@ -86,36 +104,33 @@
             }
         }
 
-        function displayNewEntriesCount(count, minutes) {
+        function displayNewEntriesCount(count, limit) {
             const countDiv = document.getElementById('newEntriesCount');
             countDiv.innerHTML = `
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 inline-block">
                     <div class="text-4xl font-bold text-purple-600">${count}</div>
-                    <div class="text-sm text-gray-600 mt-1">New entries in the last ${minutes} minutes</div>
+                    <div class="text-sm text-gray-600 mt-1">Today's entries found (checking top ${limit} rows)</div>
                 </div>
             `;
         }
 
-        function getTimeAgoText(minutesAgo) {
-            if (minutesAgo < 1) return 'Just now';
-            if (minutesAgo === 1) return '1 minute ago';
-            if (minutesAgo < 60) return `${minutesAgo} minutes ago`;
-            const hours = Math.floor(minutesAgo / 60);
-            if (hours === 1) return '1 hour ago';
-            return `${hours} hours ago`;
+        function getPositionLabel(position) {
+            if (position === 0) return 'Most recent';
+            if (position < 5) return `Entry #${position + 1}`;
+            return `Entry #${position + 1}`;
         }
 
         function displayNewEntries(entries) {
             const listDiv = document.getElementById('newEntriesList');
             
             if (entries.length === 0) {
-                listDiv.innerHTML = '<p class="text-gray-500 text-center py-8">No new entries in the selected time range.</p>';
+                listDiv.innerHTML = '<p class="text-gray-500 text-center py-8">No new entries from today yet.</p>';
                 return;
             }
 
             entries.forEach((entry, index) => {
-                const timeAgo = getTimeAgoText(entry._minutesAgo);
-                const isRecent = entry._minutesAgo <= 10;
+                const positionLabel = getPositionLabel(index);
+                const isRecent = index < 5;
                 const borderColor = isRecent ? 'border-green-400' : 'border-gray-300';
                 const bgColor = isRecent ? 'bg-green-50' : 'bg-white';
                 
@@ -132,7 +147,7 @@
                             </div>
                             <div class="text-right">
                                 <span class="text-xs ${isRecent ? 'bg-green-500' : 'bg-purple-500'} text-white px-2 py-1 rounded-full">
-                                    ${timeAgo}
+                                    ${positionLabel}
                                 </span>
                             </div>
                         </div>

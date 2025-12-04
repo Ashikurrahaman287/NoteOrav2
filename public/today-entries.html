@@ -9,6 +9,19 @@
     <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bg-gray-50">
+    <script>
+        (async function() {
+            try {
+                const response = await fetch('/api/check-session', { credentials: 'include' });
+                const result = await response.json();
+                if (!result.authenticated) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                window.location.href = '/';
+            }
+        })();
+    </script>
     <div class="container mx-auto px-4 py-8 max-w-6xl">
         <header class="text-center mb-10">
             <h1 class="text-4xl font-bold text-blue-600 mb-2">Today's Entries</h1>
@@ -53,7 +66,13 @@
             entriesDiv.innerHTML = '';
 
             try {
-                const response = await fetch('/api/today-entries');
+                const response = await fetch('/api/today-entries', { credentials: 'include' });
+                
+                if (response.status === 401) {
+                    window.location.href = '/';
+                    return;
+                }
+                
                 const result = await response.json();
 
                 if (result.success) {
