@@ -7,21 +7,32 @@ const SHEET_1_ID = "1riG_XlCSB5gZlWzU2wc8zebBS5KEN37n7fc3m4q6_rc";
 function parseDate(dateStr) {
   if (!dateStr) return null;
   
+  // ISO format: YYYY-MM-DD
   const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) {
     return new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3]));
   }
   
-  const us = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (us) {
-    return new Date(parseInt(us[3]), parseInt(us[1]) - 1, parseInt(us[2]));
+  // DD/MM/YYYY format (European/British - most common in your sheet)
+  const ddmmyyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyy) {
+    const day = parseInt(ddmmyyyy[1]);
+    const month = parseInt(ddmmyyyy[2]);
+    const year = parseInt(ddmmyyyy[3]);
+    // If day > 12, it's definitely DD/MM/YYYY
+    // Otherwise check if month > 12 to determine format
+    if (day > 12 || month <= 12) {
+      return new Date(year, month - 1, day);
+    }
   }
   
-  const eu = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-  if (eu) {
-    return new Date(parseInt(eu[3]), parseInt(eu[2]) - 1, parseInt(eu[1]));
+  // DD-MM-YYYY format
+  const ddmmyyyyDash = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddmmyyyyDash) {
+    return new Date(parseInt(ddmmyyyyDash[3]), parseInt(ddmmyyyyDash[2]) - 1, parseInt(ddmmyyyyDash[1]));
   }
   
+  // Try native parsing as fallback
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) {
     return parsed;
