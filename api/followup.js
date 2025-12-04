@@ -129,6 +129,8 @@ async function getFollowUpRecords() {
   }
 }
 
+export { getFollowUpRecords };
+
 export default async function handler(req, res) {
   try {
     const format = req.query.format || 'csv';
