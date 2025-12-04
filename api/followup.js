@@ -67,7 +67,7 @@ function convertToCSV(data, headers) {
   return csvRows.join('\n');
 }
 
-async function getFollowUpRecords() {
+async function getFollowUpRecords(targetDays = 12) {
   try {
     const auth = await getAuthClient();
     const sheets = google.sheets({ version: 'v4', auth });
@@ -91,7 +91,7 @@ async function getFollowUpRecords() {
     console.log(`Total rows: ${rows.length - 1}`);
     console.log(`Headers:`, headers);
     console.log(`Looking for Contact Person (column 6): ASH or Yvonne`);
-    console.log(`Looking for Initial Recording Date (column 7): exactly 12 days ago\n`);
+    console.log(`Looking for Initial Recording Date (column 7): ${targetDays} days ago (±1 day tolerance)\n`);
     
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -107,15 +107,14 @@ async function getFollowUpRecords() {
       
       const daysSince = getDaysSince(initialRecordingDate);
       
-      console.log(`Row ${i}: Person=${contactPerson}, Date=${initialRecordingDate}, DaysSince=${daysSince}`);
-      
-      if (daysSince === 12) {
+      // Allow ±1 day tolerance since dates can vary
+      if (daysSince >= targetDays - 1 && daysSince <= targetDays + 1) {
         const record = {};
         headers.forEach((header, index) => {
           record[header] = row[index] || '';
         });
         followUpRecords.push(record);
-        console.log(`  ✓ MATCHED - Adding to results`);
+        console.log(`Row ${i}: Person=${contactPerson}, Date=${initialRecordingDate}, DaysSince=${daysSince} ✓ MATCHED`);
       }
     }
     
@@ -128,7 +127,7 @@ async function getFollowUpRecords() {
       csv: csv,
       data: followUpRecords,
       count: followUpRecords.length,
-      message: `Found ${followUpRecords.length} record(s) from ASH/Yvonne contacted exactly 12 days ago`
+      message: `Found ${followUpRecords.length} record(s) from ASH/Yvonne contacted ${targetDays} days ago (±1 day)`
     };
   } catch (error) {
     console.error('Error finding follow-up records:', error);
@@ -141,12 +140,13 @@ export { getFollowUpRecords };
 export default async function handler(req, res) {
   try {
     const format = req.query.format || 'csv';
-    const result = await getFollowUpRecords();
+    const days = parseInt(req.query.days) || 12;
+    const result = await getFollowUpRecords(days);
     
     if (result.success) {
       if (format === 'csv' && result.csv) {
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=followup-12days.csv');
+        res.setHeader('Content-Disposition', `attachment; filename=followup-${days}days.csv`);
         res.status(200).send(result.csv);
       } else {
         res.status(200).json(result);

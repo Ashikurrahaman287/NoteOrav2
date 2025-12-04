@@ -69,12 +69,13 @@ app.get('/api/inactive', async (req, res) => {
 app.get('/api/followup', async (req, res) => {
   try {
     const format = req.query.format || 'csv';
-    const result = await getFollowUpRecords();
+    const days = parseInt(req.query.days) || 12;
+    const result = await getFollowUpRecords(days);
     
     if (result.success) {
       if (format === 'csv' && result.csv) {
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=followup-12days.csv');
+        res.setHeader('Content-Disposition', `attachment; filename=followup-${days}days.csv`);
         res.send(result.csv);
       } else {
         res.json(result);

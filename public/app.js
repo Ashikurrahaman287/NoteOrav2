@@ -168,36 +168,36 @@ async function findInactiveProjects(days) {
     }
 }
 
-async function downloadFollowUp() {
+async function downloadFollowUp(days = 12) {
     const resultsDiv = document.getElementById('searchResults');
     
-    resultsDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Generating follow-up CSV (12 days, ASH/Yvonne)...</span></div>`;
+    resultsDiv.innerHTML = `<div class="flex items-center justify-center py-4"><div class="loading"></div><span class="ml-2 text-gray-600">Generating follow-up CSV (${days} days, ASH/Yvonne)...</span></div>`;
 
     try {
         // First, download the CSV
-        const csvResponse = await fetch('/api/followup?format=csv');
+        const csvResponse = await fetch(`/api/followup?format=csv&days=${days}`);
         
         if (csvResponse.ok) {
             const blob = await csvResponse.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'followup-12days.csv';
+            a.download = `followup-${days}days.csv`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
             
-            showToast('Follow-up CSV generated — check your downloads folder', true);
+            showToast(`Follow-up CSV generated (${days} days) — check your downloads folder`, true);
             
             // Then, fetch and display the data
-            const dataResponse = await fetch('/api/followup?format=json');
+            const dataResponse = await fetch(`/api/followup?format=json&days=${days}`);
             const result = await dataResponse.json();
             
             if (result.success && result.data && result.data.length > 0) {
                 displayResults(result.data, result.message);
             } else {
-                resultsDiv.innerHTML = `<p class="text-green-600 text-center py-4">✓ CSV downloaded! No records found matching the criteria (12 days, ASH/Yvonne)</p>`;
+                resultsDiv.innerHTML = `<p class="text-green-600 text-center py-4">✓ CSV downloaded! No records found matching the criteria (${days} days, ASH/Yvonne)</p>`;
             }
         } else {
             const result = await csvResponse.json();
