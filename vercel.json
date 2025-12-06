@@ -22,6 +22,18 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/today-entries.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/new-entry.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/check-session.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "public/**",
       "use": "@vercel/static"
     }
@@ -46,6 +58,18 @@
     {
       "src": "/api/followup",
       "dest": "api/followup.js"
+    },
+    {
+      "src": "/api/today-entries",
+      "dest": "api/today-entries.js"
+    },
+    {
+      "src": "/api/new-entry",
+      "dest": "api/new-entry.js"
+    },
+    {
+      "src": "/api/check-session",
+      "dest": "api/check-session.js"
     },
     {
       "src": "/(.*)",
