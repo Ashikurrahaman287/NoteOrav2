@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
+import CryptoJS from 'crypto-js';
 import { addRecord } from './api/add.js';
 import { searchRecords } from './api/search.js';
 import { findInactiveProjects } from './api/inactive.js';
@@ -19,40 +20,34 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const SESSION_DURATION_MS = 200 * 60 * 1000;
-const sessions = new Map();
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 
-function generateSessionToken() {
-  return crypto.randomBytes(32).toString('hex');
+function createSessionToken() {
+  const payload = {
+    exp: Date.now() + SESSION_DURATION_MS,
+    iat: Date.now(),
+    nonce: crypto.randomBytes(16).toString('hex')
+  };
+  const payloadStr = JSON.stringify(payload);
+  const encrypted = CryptoJS.AES.encrypt(payloadStr, SESSION_SECRET).toString();
+  return encrypted;
 }
 
-function createSession() {
-  const token = generateSessionToken();
-  const expiresAt = Date.now() + SESSION_DURATION_MS;
-  sessions.set(token, { expiresAt });
-  return token;
-}
-
-function validateSession(token) {
+function validateSessionToken(token) {
   if (!token) return false;
-  const session = sessions.get(token);
-  if (!session) return false;
-  if (Date.now() > session.expiresAt) {
-    sessions.delete(token);
+  try {
+    const decrypted = CryptoJS.AES.decrypt(token, SESSION_SECRET);
+    const payloadStr = decrypted.toString(CryptoJS.enc.Utf8);
+    if (!payloadStr) return false;
+    const payload = JSON.parse(payloadStr);
+    if (Date.now() > payload.exp) {
+      return false;
+    }
+    return true;
+  } catch (e) {
     return false;
   }
-  return true;
 }
-
-function cleanupExpiredSessions() {
-  const now = Date.now();
-  for (const [token, session] of sessions.entries()) {
-    if (now > session.expiresAt) {
-      sessions.delete(token);
-    }
-  }
-}
-
-setInterval(cleanupExpiredSessions, 60000);
 
 function checkSameOrigin(req) {
   const origin = req.get('Origin');
@@ -90,7 +85,7 @@ function requireAuth(req, res, next) {
   }
   
   const sessionToken = req.cookies.noteora_session;
-  if (!validateSession(sessionToken)) {
+  if (!validateSessionToken(sessionToken)) {
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
   next();
@@ -112,12 +107,13 @@ app.post('/api/validate-code', async (req, res) => {
     const result = await validateCode(code, clientIp);
     
     if (result.success) {
-      const sessionToken = createSession();
+      const sessionToken = createSessionToken();
       res.cookie('noteora_session', sessionToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: SESSION_DURATION_MS
+        sameSite: 'lax',
+        maxAge: SESSION_DURATION_MS,
+        path: '/'
       });
     }
     
@@ -130,7 +126,7 @@ app.post('/api/validate-code', async (req, res) => {
 
 app.get('/api/check-session', (req, res) => {
   const sessionToken = req.cookies.noteora_session;
-  const isValid = validateSession(sessionToken);
+  const isValid = validateSessionToken(sessionToken);
   res.json({ authenticated: isValid });
 });
 

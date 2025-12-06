@@ -39,6 +39,10 @@ You need to set up **one** of these authentication methods:
 **Access Code (Required):**
 - `ACCESS_CODE` - Your secret access code for the app (e.g., "mySecretCode123")
 
+**Session Secret (Recommended for Production):**
+- `SESSION_SECRET` - A random string used to encrypt session tokens (e.g., generate with `openssl rand -hex 32`)
+- If not set, a random secret is generated at startup (sessions will be invalidated on cold starts)
+
 ## Step 3: Deploy to Vercel
 
 ```bash
@@ -77,6 +81,7 @@ For local development, create a `.env` file:
 ```
 GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 ACCESS_CODE=yourLocalAccessCode
+SESSION_SECRET=your-random-secret-string-for-sessions
 ```
 
 Never commit this file to Git!
